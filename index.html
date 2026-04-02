@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Discipline OS</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- APP LOADER -->
+<div id="appLoader" style="position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px">
+  <div style="width:48px;height:48px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;color:#fff;font-size:1.4rem;font-weight:700">D</div>
+  <div style="width:32px;height:2px;background:var(--border);border-radius:2px;overflow:hidden"><div style="width:40%;height:100%;background:#6366f1;animation:load-slide 1s ease-in-out infinite"></div></div>
+</div>
+<style>@keyframes load-slide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}</style>
+
+<!-- FOCUS OVERLAY -->
+<div id="focusOverlay" class="focus-overlay hidden">
+  <button id="focusExit" class="focus-exit-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    Exit Focus
+  </button>
+  <div class="focus-content">
+    <div class="focus-category-badge" id="focusCategory"></div>
+    <h2 class="focus-task-name" id="focusTaskName"></h2>
+    <div class="focus-goal" id="focusGoal"></div>
+    <div class="focus-timer" id="focusTimer">00:00</div>
+    <div class="focus-min-label" id="focusMinLabel"></div>
+    <div class="focus-progress-ring">
+      <svg viewBox="0 0 120 120" class="ring-svg">
+        <circle cx="60" cy="60" r="54" class="ring-bg"/>
+        <circle cx="60" cy="60" r="54" class="ring-fill" id="ringFill"/>
+      </svg>
+    </div>
+    <div class="focus-controls">
+      <button class="focus-btn pause-btn" id="focusPause">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>Pause
+      </button>
+      <button class="focus-btn stop-btn" id="focusStop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>End Task
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TASK MODAL -->
+<div id="taskModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">New Task</h3>
+      <button class="modal-close" id="modalClose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label class="field-label">Task Name</label>
+        <input type="text" id="mTaskName" class="field-input" placeholder="e.g. Deep Work — JavaScript" />
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label">Hours</label>
+          <div class="time-input-wrap">
+            <input type="number" id="mTaskHr" class="field-input" placeholder="0" min="0" max="23" />
+            <span class="time-unit-label">hr</span>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Minutes</label>
+          <div class="time-input-wrap">
+            <input type="number" id="mTaskMin" class="field-input" placeholder="30" min="0" max="59" />
+            <span class="time-unit-label">min</span>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Category</label>
+          <select id="mTaskCat" class="field-input">
+            <option value="Skill">⚡ Skill</option>
+            <option value="Study">📚 Study</option>
+            <option value="Health">💪 Health</option>
+            <option value="Work">💼 Work</option>
+            <option value="Personal">🌱 Personal</option>
+          </select>
+        </div>
+      </div>
+      <div class="time-preview" id="timePreview" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span id="timePreviewText">Target: —</span>
+      </div>
+      <!-- Link to goal -->
+      <div class="field-group">
+        <label class="field-label">Link to Goal <span style="color:var(--ink-dim);font-weight:400">(optional)</span></label>
+        <select id="mTaskGoalId" class="field-input">
+          <option value="">— No goal —</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Today's Sub-goal</label>
+        <input type="text" id="mTaskGoal" class="field-input" placeholder="What will you accomplish today?" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" id="modalCancel">Cancel</button>
+      <button class="btn-primary" id="modalSave">Save Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- GOAL MODAL -->
+<div id="goalModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="goalModalTitle">New Goal</h3>
+      <button class="modal-close" id="goalModalClose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label class="field-label">Goal Title</label>
+        <input type="text" id="gTitle" class="field-input" placeholder="e.g. Become a Web Developer" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Why this goal? <span style="color:var(--ink-dim);font-weight:400">(optional)</span></label>
+        <textarea id="gDesc" class="field-input" rows="2" placeholder="What does achieving this mean to you?"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label">Start Date</label>
+          <input type="date" id="gStartDate" class="field-input" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Deadline</label>
+          <input type="date" id="gDeadline" class="field-input" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Category</label>
+          <select id="gCat" class="field-input">
+            <option value="Skill">⚡ Skill</option>
+            <option value="Study">📚 Study</option>
+            <option value="Health">💪 Health</option>
+            <option value="Work">💼 Work</option>
+            <option value="Personal">🌱 Personal</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" id="goalModalCancel">Cancel</button>
+      <button class="btn-primary" id="goalModalSave">Save Goal</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="brand">
+        <div class="brand-mark">D</div>
+        <div class="brand-name">iscipline<span></span></div>
+      </div>
+      <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-link active" data-page="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        Dashboard
+      </a>
+      <a href="#" class="nav-link" data-page="tasks">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Tasks
+      </a>
+      <a href="#" class="nav-link" data-page="goals">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        Goals
+      </a>
+      <a href="#" class="nav-link" data-page="reports">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Reports
+      </a>
+      <a href="#" class="nav-link" data-page="analytics">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Analytics
+      </a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <!-- User info -->
+      <div class="sidebar-user">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <div class="user-info">
+          <div class="user-name" id="userName">Loading…</div>
+          <button class="btn-signout" id="signOutBtn">Sign out</button>
+        </div>
+      </div>
+      <div class="streak-widget">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        <span id="sidebarStreak">0</span>
+        <small>day streak</small>
+      </div>
+      <div class="sidebar-date" id="sidebarDate"></div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" id="mainContent">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div><p class="page-eyebrow">Overview</p><h1 class="page-title">Dashboard</h1></div>
+        <div class="button-group">
+          <button class="btn-end-day" id="endDayBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>End Day
+          </button>
+          <button class="btn-primary" id="addTaskBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Task
+          </button>
+        </div>
+      </div>
+
+      <!-- GOAL HERO COUNTDOWN -->
+      <div class="goal-hero hidden" id="goalHero"></div>
+
+      <!-- VISION BANNER -->
+      <div class="vision-banner">
+        <div class="vision-icon">🎯</div>
+        <div class="vision-body">
+          <p class="vision-label">YOUR BIG GOAL</p>
+          <input id="visionInput" class="vision-input" type="text" placeholder="Write your main goal — e.g. Become a Full-Stack Developer" />
+        </div>
+        <div class="vision-save-dot" id="visionSaveDot"></div>
+      </div>
+
+      <!-- FUTURE YOU MESSAGE -->
+      <div class="future-card">
+        <div class="future-icon">✉️</div>
+        <div class="future-body">
+          <p class="future-label">MESSAGE TO FUTURE YOU</p>
+          <textarea id="futureInput" class="future-input" rows="2" placeholder="3 months from now, I will be... (write it like it's already true)"></textarea>
+        </div>
+        <div class="vision-save-dot" id="futureSaveDot"></div>
+      </div>
+
+      <!-- SUMMARY CARDS -->
+      <div class="summary-grid">
+        <div class="sum-card">
+          <div class="sum-icon sum-score"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+          <div class="sum-body">
+            <span class="sum-value" id="dailyScore">0</span>
+            <span class="sum-label">Today's Score</span>
+            <span class="score-trend" id="scoreTrend"></span>
+          </div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-icon sum-completed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="sum-body"><span class="sum-value green" id="dashCompleted">0</span><span class="sum-label">Completed</span></div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-icon sum-failed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
+          <div class="sum-body"><span class="sum-value red" id="dashFailed">0</span><span class="sum-label">Failed</span></div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-icon sum-pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+          <div class="sum-body"><span class="sum-value amber" id="dashNotStarted">0</span><span class="sum-label">Not Started</span></div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-icon sum-weekly"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          <div class="sum-body"><span class="sum-value blue" id="weeklyAvg">0</span><span class="sum-label">Weekly Avg</span></div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-icon sum-hours"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div class="sum-body"><span class="sum-value" id="todayHours">0h 0m</span><span class="sum-label">Today's Time</span></div>
+        </div>
+      </div>
+
+      <!-- PENALTY BANNER -->
+      <div class="penalty-banner hidden" id="penaltyBanner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="penaltyText"></span>
+      </div>
+
+      <!-- HEATMAP -->
+      <div class="section-card">
+        <div class="section-card-header"><h3>Consistency Heatmap <span class="badge-mono">30 days</span></h3></div>
+        <div class="heatmap-grid" id="heatmapGrid"></div>
+        <div class="heatmap-legend">
+          <span class="hm-dot green"></span>Mostly completed
+          <span class="hm-dot red"></span>Mostly failed
+          <span class="hm-dot amber"></span>Mixed
+          <span class="hm-dot grey"></span>No data
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TASKS ══ -->
+    <div class="page" id="page-tasks">
+      <div class="page-header">
+        <div><p class="page-eyebrow">Daily Execution</p><h1 class="page-title">Tasks</h1></div>
+        <button class="btn-primary" id="addTaskBtnTasks">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Task
+        </button>
+      </div>
+      <div class="filter-strip" id="filterStrip">
+        <button class="filter-btn active" data-cat="All">All</button>
+        <button class="filter-btn" data-cat="Skill">⚡ Skill</button>
+        <button class="filter-btn" data-cat="Study">📚 Study</button>
+        <button class="filter-btn" data-cat="Health">💪 Health</button>
+        <button class="filter-btn" data-cat="Work">💼 Work</button>
+        <button class="filter-btn" data-cat="Personal">🌱 Personal</button>
+      </div>
+      <div class="task-grid" id="taskGrid"></div>
+      <div class="empty-state hidden" id="taskEmpty">
+        <div class="empty-icon"><svg viewBox="0 0 64 64" fill="none"><rect x="8" y="12" width="48" height="44" rx="6" stroke="currentColor" stroke-width="2"/><path d="M20 28h24M20 36h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <p>No tasks yet.</p>
+        <button class="btn-primary" id="addTaskBtnEmpty">Add First Task</button>
+      </div>
+    </div>
+
+    <!-- ══ GOALS ══ -->
+    <div class="page" id="page-goals">
+      <div class="page-header">
+        <div><p class="page-eyebrow">Long-term Tracking</p><h1 class="page-title">Goals</h1></div>
+        <button class="btn-primary" id="addGoalBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Goal
+        </button>
+      </div>
+      <div class="goals-grid" id="goalsGrid"></div>
+      <div class="empty-state hidden" id="goalsEmpty">
+        <div class="empty-icon"><svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="26" stroke="currentColor" stroke-width="2"/><circle cx="32" cy="32" r="16" stroke="currentColor" stroke-width="2"/><circle cx="32" cy="32" r="6" stroke="currentColor" stroke-width="2"/></svg></div>
+        <p>No goals yet. Set your first long-term goal.</p>
+        <button class="btn-primary" id="addGoalBtnEmpty">Add First Goal</button>
+      </div>
+    </div>
+
+    <!-- ══ REPORTS ══ -->
+    <div class="page" id="page-reports">
+      <div class="page-header">
+        <div><p class="page-eyebrow">History</p><h1 class="page-title">Daily Reports</h1></div>
+        <button class="btn-ghost-danger" id="clearReportsBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Clear All
+        </button>
+      </div>
+      <div id="reportsContainer"></div>
+      <div class="empty-state hidden" id="reportsEmpty">
+        <div class="empty-icon"><svg viewBox="0 0 64 64" fill="none"><rect x="8" y="8" width="48" height="48" rx="8" stroke="currentColor" stroke-width="2"/></svg></div>
+        <p>No reports yet. End your day to generate one.</p>
+      </div>
+    </div>
+
+    <!-- ══ ANALYTICS ══ -->
+    <div class="page" id="page-analytics">
+      <div class="page-header"><div><p class="page-eyebrow">Insights</p><h1 class="page-title">Analytics</h1></div></div>
+      <div class="analytics-grid">
+        <div class="analytics-card"><p class="an-label">Total Hours Today</p><p class="an-value" id="anTodayHours">0h 0m</p></div>
+        <div class="analytics-card"><p class="an-label">Total Hours This Week</p><p class="an-value" id="anWeekHours">0h 0m</p></div>
+        <div class="analytics-card"><p class="an-label">Best Task Today</p><p class="an-value an-task" id="anBestTask">—</p></div>
+        <div class="analytics-card"><p class="an-label">Needs More Work</p><p class="an-value an-task" id="anWeakTask">—</p></div>
+      </div>
+      <div class="section-card" style="margin-top:24px"><div class="section-card-header"><h3>Weekly Score Chart</h3></div><div class="bar-chart" id="weeklyBarChart"></div></div>
+      <div class="section-card" style="margin-top:24px"><div class="section-card-header"><h3>Time by Category</h3></div><div class="cat-breakdown" id="catBreakdown"></div></div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- Use type="module" for ES module imports -->
+<script type="module" src="script.js"></script>
+</body>
+</html>
